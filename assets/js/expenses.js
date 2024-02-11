@@ -24,7 +24,7 @@ var errorCallback = function (status, statusText) {
 
 function dataTableLoad() {
 
-  var url = "http://localhost:5000/api/";
+  var url = "http://18.232.160.77:5000/api/";
   var method = "GET";
   var data = null; // Data to send, if any
 
@@ -219,7 +219,7 @@ function calculateTotalCost() {
 }
 
 function saveChanges() {
-  var url = "http://localhost:5000/api/";
+  var url = "http://18.232.160.77:5000/api/";
 
   var expId = element('expenseId').innerHTML.split(".").pop().trimStart();
   var expCategory = element('expenseCategory').value;
@@ -274,7 +274,7 @@ function deleteSingleItem() {
   var expid = element('expenseId').innerText;
   var id = parseInt(expid.split(".").pop());
 
-  var url = "http://localhost:5000/api/" + id;
+  var url = "http://18.232.160.77:5000/api/" + id;
   var method = "DELETE";
   var data = null;
   
