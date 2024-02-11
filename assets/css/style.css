@@ -830,6 +830,18 @@ h6 {
   padding-bottom: 10px;
 }
 
+.cardErrorText {
+  font-size: smaller;
+  margin-top: -6px;
+  color: red;
+}
+
+.cardValidText {
+  font-size: smaller;
+  margin-top: -6px;
+  color: green;
+}
+
 /*--------------------------------------------------------------
 # Dashboard
 --------------------------------------------------------------*/
@@ -1041,6 +1053,10 @@ h6 {
 
 #expenseTable .tdCenter{
   padding-left: 10px;
+}
+
+.rowSelected {
+  background-color: lightblue !important;
 }
 
 

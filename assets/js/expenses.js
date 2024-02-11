@@ -10,8 +10,12 @@ var selectedRow = null;
 var expenseData = "";
 var pageCount = 1;
 var pageRowCount = 25;
-var selectedYear = 0;
+var selectedYear = new Date().getFullYear();
 var filteredData = {data:[]};
+var isDescValid = false;
+var isNotesValid = true;
+var isCostValid = false;
+var areThereChanges = false;
 
 /**
  * AJAX call
@@ -119,9 +123,10 @@ function loadSingleItem (el) {
   if(el == null) {
     selectedRow = null;
     element('expenseId').innerHTML = "Expense No.";
-    element('expenseCategory').value = "";
     element('expenseDescription').value = "";
-    element('expenseDate').value = "";
+    element('expenseDate').value = new Date().getFullYear() + "-"+ 
+    (new Date().getMonth() < 10 ? "0": "") + (new Date().getMonth() + 1) + "-" + 
+    (new Date().getDate() < 10? "0" : "") + new Date().getDate();
     element('expenseCost').value = "";
     element('expenseIncludesHST').checked = false ;
     element('expenseTotalCost').value = "";
@@ -141,6 +146,11 @@ function loadSingleItem (el) {
     element('expenseNotes').value = selectedRow.cells[7].textContent;
 
     readOnlySingleItem();
+    ResetTableRows();
+    selectedRow.className = 'rowSelected';
+    for(var cnt = 0; cnt < selectedRow.cells.length; cnt++) {
+      selectedRow.cells[cnt].style.backgroundColor = '#C7E4FC';
+    }
   }
 
   document.getElementById('detailCard').className = "detailcard";
@@ -167,6 +177,10 @@ function readOnlySingleItem () {
   element('expenseNotes').disabled = true;
   element('saveChanges').disabled = true;
   element('cancelChanges').disabled = true;
+
+  isCostValid = true;
+  isDescValid = true;
+  isNotesValid = true;
 }
 
 function paginationControl () {
@@ -208,66 +222,92 @@ function changeYear () {
 };
 
 function calculateTotalCost() {
-  if (element('expenseIncludesHST').checked) {
-    element('expenseTotalCost').value = element('expenseCost').value;
+
+  if (element('expenseCost').value == "") {
+    isCostValid = false;
   }
-  else{
-    var totalCost = parseFloat(element('expenseCost').value) * 1.13
-    element('expenseTotalCost').value = totalCost.toFixed(2);
+  else {
+    var expenseCost = parseFloat(element('expenseCost').value);
+
+    if(CheckCurrency(expenseCost, 'expenseCost')) {
+      if (element('expenseIncludesHST').checked) {
+        element('expenseTotalCost').value = expenseCost.toFixed(2);
+      }
+      else{
+        var totalCost =  expenseCost * 1.13
+        element('expenseTotalCost').value = totalCost.toFixed(2);
+      }
+      isCostValid = true;
+    }
+    else {
+      element('expenseTotalCost').value = "";
+      isCostValid = false;
+    }
+    
+    element('expenseCost').value = expenseCost.toFixed(2);
+    areThereChanges = true;
   }
-  
 }
 
 function saveChanges() {
-  var url = "http://18.232.160.77:5000/api/";
+  if (areThereChanges) {
+    if (isCostValid && isDescValid && isNotesValid) {
+      var url = "http://18.232.160.77:5000/api/";
 
-  var expId = element('expenseId').innerHTML.split(".").pop().trimStart();
-  var expCategory = element('expenseCategory').value;
-  var expDescription = element('expenseDescription').value;
-  var expDate = element('expenseDate').value;
-  var expCost = element('expenseCost').value;
-  var expElement = element('expenseIncludesHST').checked;
-  var expTotalCost = element('expenseTotalCost').value;
-  var expNotes = element('expenseNotes').value;
+      var expId = element('expenseId').innerHTML.split(".").pop().trimStart();
+      var expCategory = element('expenseCategory').value;
+      var expDescription = element('expenseDescription').value;
+      var expDate = element('expenseDate').value;
+      var expCost = element('expenseCost').value;
+      var expElement = element('expenseIncludesHST').checked;
+      var expTotalCost = element('expenseTotalCost').value;
+      var expNotes = element('expenseNotes').value;
 
-  var method = "";
+      var method = "";
 
-  if(selectedRow == null) {
-    //Insert Row
-    method = "POST";
+      if(selectedRow == null) {
+        //Insert Row
+        method = "POST";
+      }
+      else {
+        method = "PUT";
+        url = url + expId;
+      }
+
+      var data = {
+        "Category": expCategory,
+        "Description": expDescription,
+        "ExpenseDate": expDate,
+        "Cost": expCost,
+        "IncludesHST": expElement,
+        "TotalCost": expTotalCost,
+        "Notes": expNotes
+      }; // Data to send, if any
+
+      var successCallback = function (response) {
+        console.log("Success:", response);
+        if(response.data['changedRows'] > 0){
+          alert(response.data['affectedRows'] + " rows updated. " + response.message);  
+        }
+        else{
+          alert(response.data['affectedRows'] + " new row added with ID: " + response.data['insertId']);
+        }
+        location.reload();
+      };
+
+      var errorCallback = function (error) {
+        alert (error.toString());
+      };
+
+      makeAjaxRequest(url, method, data, successCallback, errorCallback); 
+    }
+    else {
+      alert ("Error: Invalid expense details. Please correct any errors and try again.");
+    }
   }
   else {
-    method = "PUT";
-    url = url + expId;
+    alert ("Error: No changes found to save.");
   }
-
-  var data = {
-    "Category": expCategory,
-    "Description": expDescription,
-    "ExpenseDate": expDate,
-    "Cost": expCost,
-    "IncludesHST": expElement,
-    "TotalCost": expTotalCost,
-    "Notes": expNotes
-  }; // Data to send, if any
-
-  var successCallback = function (response) {
-    console.log("Success:", response);
-    if(response.data['changedRows'] > 0){
-      alert(response.data['affectedRows'] + " rows updated. " + response.message);  
-    }
-    else{
-      alert(response.data['affectedRows'] + " new row added with ID: " + response.data['insertId']);
-    }
-    location.reload();
-  };
-
-  var errorCallback = function (error) {
-    alert (error.toString());
-  };
-
-  makeAjaxRequest(url, method, data, successCallback, errorCallback); 
-  
 }
 
 function deleteSingleItem() {
@@ -290,7 +330,6 @@ function deleteSingleItem() {
   };
 
   makeAjaxRequest(url, method, data, successCallback, errorCallback);
-
   
 }
 
@@ -317,5 +356,32 @@ function cancelChanges() {
 
     readOnlySingleItem();
   }
+  areThereChanges = false;
 }
 
+function ResetTableRows () {
+  for(var rcnt = 0; rcnt < element('expenseTable').rows.length; rcnt++) {
+    if (element('expenseTable').rows[rcnt].className != "") {
+      var selectedRow = element('expenseTable').rows[rcnt];
+      for(var cnt = 0; cnt < selectedRow.cells.length; cnt++) {
+        selectedRow.cells[cnt].style.backgroundColor = 'white';
+      }
+    }
+  }
+}
+
+//Adding all event handlers
+element('expenseDescription').onkeyup = (el) => {
+  if( el.srcElement.value == "") {
+    isDescValid = false;
+  }
+  else{
+    isDescValid = TextLength(el.srcElement.value, 'lblDescLength', 45);
+    areThereChanges = true;
+  }
+}
+
+element('expenseNotes').onkeyup = (el) => {
+  isNotesValid = TextLength(el.srcElement.value, 'lblNotesLength', 150);
+  areThereChanges = true;
+}
